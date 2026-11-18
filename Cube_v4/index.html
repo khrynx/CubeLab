@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#10131b">
+  <title>Cube Lab — Search, step by step</title>
+  <link rel="icon" href="./icon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./sketch/kociemba.bundle.js"></script>
+  <script type="module" src="./sketch/sketch.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Cube Lab home"><img class="brand-mark" src="./icon.png" alt=""><span>CUBE<span class="brand-light">LAB</span></span></a>
+    <nav aria-label="Main navigation">
+        <a href="#representation">Representation</a>
+        <a href="#walkthrough">Different Search Strategies</a>
+        <a href="#solver-section">The Solver</a>
+        <a href="#compare">Conclusion + More!</a>
+    </nav>
+    <a class="top-cta" href="#representation">Start learning <span aria-hidden="true">↓</span></a>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div class="intro-copy">
+        <p class="eyebrow"><span class="live-dot"></span> VISUAL ALGORITHM WALKTHROUGH</p>
+        <h1>Don’t just hear<br>about the search.<br><span>Watch it happen.</span></h1>
+        <p>Step through how different algorithms explore a search graph, decide which state to visit next, and find a route to the goal.</p>
+        <a class="primary-link" href="#representation">See how a cube becomes data <span aria-hidden="true">↓</span></a>
+      </div>
+      <div class="intro-visual" aria-hidden="true">
+        <svg viewBox="0 0 700 320">
+          <g class="intro-graph-edges">
+            <line x1="65" y1="160" x2="205" y2="72"/><line x1="65" y1="160" x2="205" y2="248"/>
+            <line x1="205" y1="72" x2="370" y2="58"/><line x1="205" y1="72" x2="370" y2="132"/>
+            <line x1="205" y1="248" x2="370" y2="238"/><path d="M226 254 C290 304 450 304 514 254"/>
+            <line x1="370" y1="58" x2="535" y2="58"/>
+          </g>
+          <path class="intro-route" d="M65 160L205 72 370 58 535 58"/>
+          <g class="intro-graph-moves">
+            <text x="135" y="108">F′</text><text x="135" y="197">R′</text>
+            <text x="288" y="58">U′</text><text x="288" y="95">R′</text>
+            <text x="288" y="236">U′</text><text x="370" y="310">U</text><text x="452" y="48">R′</text>
+          </g>
+          <circle class="node node-start" cx="65" cy="160" r="21"/><circle class="node node-frontier" cx="205" cy="72" r="21"/>
+          <circle class="node node-frontier" cx="205" cy="248" r="21"/><circle class="node node-visited" cx="370" cy="58" r="21"/>
+          <circle class="node node-quiet" cx="370" cy="132" r="21"/><circle class="node node-quiet" cx="370" cy="238" r="21"/>
+          <circle class="node node-quiet" cx="535" cy="248" r="21"/><circle class="node node-goal" cx="535" cy="58" r="21"/>
+          <g class="intro-graph-labels">
+            <text x="65" y="164">S</text><text x="205" y="76">A</text><text x="205" y="252">B</text>
+            <text x="370" y="62">C</text><text x="370" y="136">D</text><text x="370" y="242">E</text>
+            <text x="535" y="252">F</text><text x="535" y="62">T</text>
+          </g>
+        </svg>
+        <span class="visual-tag">A SMALL SEARCH MODEL / NOT TO SCALE</span>
+      </div>
+    </section>
+
+    <section class="representation section-wrap" id="representation">
+      <div class="section-heading">
+        <div><p class="eyebrow">01 / FIRST, REPRESENT THE CUBE</p><h2>Turn a colourful puzzle into a state a search can use: How does a computer see the cube?</h2></div>
+        <p>An algorithm cannot reason about “the red sticker looks out of place.” It needs a precise description of the cube.</p>
+      </div>
+      <div class="representation-panel">
+        <div class="representation-visual">
+          <div class="representation-toggle" role="tablist" aria-label="Cube state representation">
+            <button type="button" class="representation-tab active" role="tab" aria-selected="true" data-representation="stickers">54 facelets</button>
+            <button type="button" class="representation-tab" role="tab" aria-selected="false" data-representation="pieces">20 pieces</button>
+          </div>
+          <div class="representation-actions"><button type="button" id="representation-turn">Apply R turn ↻</button><button type="button" id="representation-reset">Reset</button><span id="representation-move-label">Solved state</span></div>
+          <div class="cube-views">
+            <div class="cube-3d-card">
+              <span class="cube-view-label">3D CUBE / DRAG TO ROTATE</span>
+              <div id="representation-cube-3d" class="representation-cube-3d" role="group" tabindex="0" aria-label="Interactive three-dimensional Rubik's cube. Drag to rotate; use the arrow keys to change the view."></div>
+              <span class="cube-drag-hint">Drag to orbit · Arrow keys also rotate</span>
+            </div>
+            <div id="representation-cube" class="representation-cube" aria-label="Unfolded Rubik's cube representation"></div>
+          </div>
+          <div class="representation-state-graph">
+            <div class="representation-state-graph-head"><span>STATE GRAPH / SAME R-TURN STATES</span><span id="representation-state-label">SOLVED</span></div>
+            <div id="representation-state-graph-svg" aria-label="Graph of states produced by repeated R turns"></div>
+            <p class="representation-state-graph-note">The highlighted node is the same cube state shown in 3D and on the net. Four R turns return to solved.</p>
+          </div>
+          <div class="net-caption"><span><i class="net-color white"></i> U</span><span><i class="net-color red"></i> R</span><span><i class="net-color green"></i> F</span><span><i class="net-color yellow"></i> D</span><span><i class="net-color orange"></i> L</span><span><i class="net-color blue"></i> B</span></div>
+        </div>
+        <div class="representation-explanation" aria-live="polite">
+          <p class="eyebrow" id="representation-kicker">FACELET REPRESENTATION</p>
+          <h3 id="representation-title">A state can be 54 sticker colours.</h3>
+          <p id="representation-description">Lay the six faces flat. Each little square is a facelet; a state records the colour at all 54 positions. The centre facelets anchor the six faces.</p>
+          <div class="representation-readout" id="representation-readout"><span>STATE ENCODING / FACELETS</span><code>U[0…8] · R[0…8] · F[0…8]<br>D[0…8] · L[0…8] · B[0…8]</code></div>
+          <div class="representation-equation"><span>SOLVED</span><b>+ move R</b><span>NEW STATE</span><strong>one edge in the graph</strong></div>
+          <p class="move-notation"><code>R</code> means turn the right face clockwise when looking at that face; <code>R′</code> reverses it, and <code>R2</code> is a half-turn.</p>
+          <p class="representation-hint"><span>↗</span> The search algorithm stores and compares these states; it does not reason from a picture alone.</p>
+        </div>
+      </div>
+      <p class="representation-note"><span>ⓘ</span> The draggable 3D view, unfolded net, and small R-turn state graph all update from the same cube state.</p>
+    </section>
+
+    <section class="walkthrough section-wrap" id="walkthrough">
+      <div class="section-heading">
+        <div><p class="eyebrow">02 / FOLLOW THE SEARCH</p><h2>Here are humanity's algorithmic attempts at slaying the puzzle!</h2></div>
+        <p>BFS, A*, and IDA* share the scramble <code>R U F</code>. Kociemba uses a short example that visibly passes through its phase-one subgroup.</p>
+      </div>
+      <div class="algorithm-tabs" role="tablist" aria-label="Choose an algorithm">
+        <button class="algorithm-tab active" type="button" role="tab" aria-selected="true" data-algorithm="bfs"><span class="tab-number">01</span><span><strong>Breadth-first</strong><small>Explore by layers</small></span><span class="tab-arrow">↗</span></button>
+        <button class="algorithm-tab" type="button" role="tab" aria-selected="false" data-algorithm="astar"><span class="tab-number">02</span><span><strong>A*</strong><small>Follow the estimate</small></span><span class="tab-arrow">↗</span></button>
+        <button class="algorithm-tab" type="button" role="tab" aria-selected="false" data-algorithm="idastar"><span class="tab-number">03</span><span><strong>Korf’s IDA*</strong><small>Deepen with patterns</small></span><span class="tab-arrow">↗</span></button>
+        <button class="algorithm-tab" type="button" role="tab" aria-selected="false" data-algorithm="kociemba"><span class="tab-number">04</span><span><strong>Kociemba</strong><small>Solve in two phases</small></span><span class="tab-arrow">↗</span></button>
+      </div>
+
+      <div class="algorithm-progression" aria-label="How each strategy builds on the previous one">
+        <div class="progression-item"><span>01 / BFS</span><strong>Search every layer</strong><small>Reliable, but the frontier explodes.</small></div>
+        <span class="progression-arrow" aria-hidden="true">→</span>
+        <div class="progression-item"><span>02 / A*</span><strong>Use a heuristic</strong><small>Focus the search; still store many states.</small></div>
+        <span class="progression-arrow" aria-hidden="true">→</span>
+        <div class="progression-item"><span>03 / IDA*</span><strong>Keep memory small</strong><small>Reuse the heuristic with bounded passes.</small></div>
+        <span class="progression-arrow" aria-hidden="true">→</span>
+        <div class="progression-item"><span>04 / KOCIEMBA</span><strong>Exploit cube structure</strong><small>Two phases trade proof of optimality for speed.</small></div>
+      </div>
+
+      <div class="walkthrough-flip" id="walkthrough-flip">
+        <div class="walkthrough-flip-inner" id="walkthrough-flip-inner">
+          <div class="walkthrough-front">
+            <div class="walkthrough-panel">
+        <div class="walkthrough-topline"><span id="algorithm-kicker">BREADTH-FIRST SEARCH / UNINFORMED</span><span class="demo-badge"><i></i> TEACHING GRAPH</span></div>
+        <div class="walkthrough-body">
+          <div class="visualization">
+            <div class="visualization-head"><span id="graph-title">SEARCH GRAPH</span><span class="legend" id="graph-legend"><i class="legend-dot start"></i>Start <i class="legend-dot frontier"></i>Frontier <i class="legend-dot visited"></i>Visited <i class="legend-dot goal"></i>Goal</span></div>
+            <div class="graph-container" id="graph-container" aria-label="Step-by-step search graph visualization"></div>
+            <div id="cube-context" class="cube-context"></div>
+            <div class="visualization-foot"><span id="graph-caption">Each circle is a state. Each line is a possible move.</span><span id="metric-caption">FRONTIER: 1</span></div>
+          </div>
+          <aside class="step-explanation" aria-live="polite">
+            <div class="step-top"><span class="step-label">WALKTHROUGH STEP</span><span class="step-count" id="step-count">01 / 05</span></div>
+            <div class="step-progress" id="step-progress"></div>
+            <p class="eyebrow" id="step-phase">INITIALIZE</p>
+            <h3 id="step-title">Put the start state in the queue.</h3>
+            <p class="step-description" id="step-description"></p>
+            <div class="data-card" id="data-card"></div>
+            <div class="step-controls">
+              <button class="previous-button" id="previous-step" type="button">← <span>Previous</span></button>
+              <button class="play-button" id="play-steps" type="button" aria-pressed="false"><span aria-hidden="true">▶</span> Play</button>
+              <button class="next-button" id="next-step" type="button"><span>Next step</span><b aria-hidden="true">→</b></button>
+            </div>
+            <button class="restart-button" id="restart-algorithm" type="button">↺ Restart this walkthrough</button>
+          </aside>
+        </div>
+            </div>
+            <div class="more-info-row"><button class="more-info-button" id="more-info-button" type="button" aria-expanded="false" aria-controls="algorithm-info-panel">More info <span aria-hidden="true">↻</span></button></div>
+          </div>
+          <section class="algorithm-info-panel" id="algorithm-info-panel" aria-live="polite" aria-hidden="true" inert></section>
+        </div>
+      </div>
+      <p class="teaching-note"><span>ⓘ</span> The colored cube states are generated by applying the shown face turns. The search tree is intentionally tiny for teaching; it is not the complete 43-quintillion-state graph or a full solver.</p>
+    </section>
+
+    <section class="solver-section section-wrap" id="solver-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">03 / SOLVER</p><h2>Run a real Kociemba solve on a live cube state.</h2></div>
+        <p>The solver below uses the supplied Kociemba backend to solve the current cube and then replays the returned move sequence faithfully.</p>
+      </div>
+      <div class="solver-shell">
+        <div class="solver-panel solver-cube-panel">
+          <div class="solver-view-header"><span>ACTIVE CUBE</span><span id="solver-status-label">READY</span></div>
+          <div id="solver-cube-display" class="solver-cube-display" aria-live="polite"></div>
+          <div id="solver-path-panel" class="solver-path-panel" aria-live="polite">
+            <div class="solver-path-header"><span>ILLUSTRATIVE TWO-PHASE PATH</span><span class="solver-path-stage" data-role="stage-tag">STAGE 1</span></div>
+            <div class="solver-path-visual" data-role="visual"></div>
+            <div class="solver-path-status" data-role="status">Press Solve to see the path</div>
+          </div>
+        </div>
+        <div class="solver-panel solver-controls-panel">
+          <div class="solver-toolbar">
+            <button id="solver-scramble-random" type="button">Random scramble</button>
+            <button id="solver-reset" type="button">Reset</button>
+            <button id="solver-solve" type="button" class="primary">Solve</button>
+          </div>
+          <label class="solver-input" for="solver-scramble-input">
+            <span>Scramble notation</span>
+            <input id="solver-scramble-input" type="text" value="R U R' U'" spellcheck="false" aria-label="Scramble notation input" />
+          </label>
+          <div class="solver-turn-grid" aria-label="Cube face motion controls">
+            <button type="button" class="solver-face-button" data-move="R">R</button>
+            <button type="button" class="solver-face-button" data-move="U">U</button>
+            <button type="button" class="solver-face-button" data-move="F">F</button>
+            <button type="button" class="solver-face-button" data-move="D">D</button>
+            <button type="button" class="solver-face-button" data-move="L">L</button>
+            <button type="button" class="solver-face-button" data-move="B">B</button>
+            <button type="button" class="solver-face-button" data-move="R'">R′</button>
+            <button type="button" class="solver-face-button" data-move="U'">U′</button>
+            <button type="button" class="solver-face-button" data-move="F'">F′</button>
+            <button type="button" class="solver-face-button" data-move="D'">D′</button>
+            <button type="button" class="solver-face-button" data-move="L'">L′</button>
+            <button type="button" class="solver-face-button" data-move="B'">B′</button>
+          </div>
+          <div id="solver-message" class="solver-message" data-tone="info">Ready to solve a valid cube state.</div>
+          <div class="solver-phase-row">
+            <span class="solver-tag">STATUS</span>
+            <strong id="solver-phase-text">Waiting</strong>
+          </div>
+          <div class="solver-stats" id="solver-stats">
+            <div><span>Total moves</span><strong id="solver-stat-total">—</strong></div>
+            <div><span>Phase 1</span><strong id="solver-stat-phase1">—</strong></div>
+            <div><span>Phase 2</span><strong id="solver-stat-phase2">—</strong></div>
+            <div><span>Search time</span><strong id="solver-stat-time">—</strong></div>
+          </div>
+          <div class="solver-solution-box">
+            <div class="solver-solution-header">
+              <span>Returned solution</span>
+              <button id="solver-copy-solution" type="button">Copy</button>
+            </div>
+            <div id="solver-solution-text" class="solver-solution-text">No solution yet.</div>
+          </div>
+          <div class="solver-playback">
+            <button id="solver-prev-move" type="button" aria-label="Previous move">←</button>
+            <button id="solver-play-solution" type="button" aria-label="Play solution">Play</button>
+            <button id="solver-next-move" type="button" aria-label="Next move">→</button>
+            <label class="solver-speed">
+              <span>Speed</span>
+              <select id="solver-speed-select" aria-label="Playback speed">
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="compare-section section-wrap" id="compare">
+      <div class="section-heading">
+        <div><p class="eyebrow">04 / ZOOM OUT</p><h2>Each try and fail, but Kociemba's is king.</h2></div>
+        <p>Once you have followed each search, compare what it remembers and what its solution guarantees.</p>
+      </div>
+      <div class="comparison">
+        <div class="comparison-head"><span>ALGORITHM</span><span>HOW IT CHOOSES</span><span>MEMORY</span><span>SHORTEST PATH?</span><span>GOOD FOR</span></div>
+        <div class="comparison-row"><strong><span class="row-dot dot-blue"></span>Breadth-first</strong><span>Shallowest state first</span><span class="memory-high">Very high</span><span>Yes, equal-cost moves</span><span>Small examples</span></div>
+        <div class="comparison-row"><strong><span class="row-dot dot-orange"></span>A*</strong><span>Lowest g + h estimate</span><span class="memory-high">High</span><span>With admissible h</span><span>Heuristic search</span></div>
+        <div class="comparison-row"><strong><span class="row-dot dot-green"></span>Korf’s IDA*</strong><span>Depth-first, rising f limit</span><span class="memory-low">Low search memory</span><span>With admissible h</span><span>Optimal search</span></div>
+        <div class="comparison-row"><strong><span class="row-dot dot-pink"></span>Kociemba</strong><span>Phase 1, then phase 2</span><span>Tables + search</span><span>Not generally</span><span>Fast practical solves</span></div>
+      </div>
+      <div class="cube-theory">
+        <p class="eyebrow">A LITTLE DEEPER / SCALE, REACHABILITY & OPEN QUESTIONS</p>
+        <div class="theory-grid">
+          <article class="theory-card">
+            <span class="theory-index">01 / GOD’S NUMBER</span>
+            <h3>“Shortest for every start” has a measurable limit.</h3>
+            <p>God’s number is the greatest, over all legal positions, of the length of a shortest solution. For the 3×3×3 it is <strong>20 moves</strong> in the half-turn metric (a face turn, including a half-turn, costs one). For variable-size n×n×n cubes, the diameter grows as <strong>Θ(n² / log n)</strong> under the model studied by Demaine et al.</p>
+            <a href="https://doi.org/10.1137/120867366" target="_blank" rel="noreferrer">Rokicki et al., The Diameter of the Rubik’s Cube Group Is Twenty (SIAM, 2013) ↗</a>
+          </article>
+          <article class="theory-card">
+            <span class="theory-index">02 / COMPLEXITY</span>
+            <h3>NP-hardness depends on the exact puzzle definition.</h3>
+            <p>A fixed 3×3×3 cube has a finite state space; “NP-hard” is not a useful blanket label for it. A known result proves finding an optimal solution NP-hard for an <strong>n×n×1 variant</strong> when some cubie positions and colors are ignored. That is not the same claim as NP-hardness for the ordinary, fully specified n×n×n cube.</p>
+            <a href="https://arxiv.org/abs/1106.5736" target="_blank" rel="noreferrer">Demaine et al., Algorithms for Solving Rubik’s Cubes ↗</a>
+          </article>
+          <article class="theory-card">
+            <span class="theory-index">03 / PERMUTATION PARITY</span>
+            <h3>Not every sticker arrangement is reachable.</h3>
+            <p>Legal turns preserve reachability invariants. On a 3×3×3, corner and edge permutation parity must agree; corner-twist and edge-flip totals are constrained too. Larger cubes have additional center and wing-piece constraints. “Parity” cases in big-cube solving are reachable states that look impossible after reduction—not permission for arbitrary permutations.</p>
+          </article>
+          <article class="theory-card">
+            <span class="theory-index">04 / WHAT COULD WE EXPLORE?</span>
+            <h3>Good questions are still open at the practical scale.</h3>
+            <p>How can stronger pattern databases be built within a fixed memory budget? Which move metric best reflects human or robot turns? Can we certify short solutions without storing enormous search frontiers? Comparing optimality, computation, and explainability is a rich project in its own right.</p>
+          </article>
+        </div>
+      </div>
+      <div class="closing"><span class="closing-icon">✳</span><p>At cube scale, the trick isn’t checking every path—it’s <strong>choosing what the search can afford to remember.</strong></p><a class="top-cta" href="#walkthrough">Replay a walkthrough ↑</a></div>
+    </section>
+
+  </main>
+  <footer><a class="brand" href="#"><img class="brand-mark" src="./icon.png" alt=""><span>CUBE<span class="brand-light">LAB</span></span></a><span>A VISUAL EXPLORATION OF SEARCH ALGORITHMS</span><a href="#walkthrough">Back to walkthrough ↑</a></footer>
+</body>
+</html>
